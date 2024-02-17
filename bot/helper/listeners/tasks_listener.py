@@ -421,61 +421,55 @@ class MirrorLeechListener:
         LOGGER.info(f'Task Done: {name}')
         buttons = ButtonMaker()
         if self.isLeech:
-            msg += BotTheme('L_TOTAL_FILES', Files=folders)
+            msg += f'\n<code>Total Files     </code>: {folders}\n'
             if mime_type != 0:
-                msg += BotTheme('L_CORRUPTED_FILES', Corrupt=mime_type)
-            msg += BotTheme('L_CC', Tag=self.tag)
-            if not files:
-                if self.isPrivate:
-                    msg += BotTheme('PM_BOT_MSG')
-                await sendMessage(self.message, msg, photo=self.random_pic)
+                msg += f'<code>Corrupted Files</code> : {mime_type}\n'
+            msg_ = '\n<b><i>Files has been sent in your DM.</i></b>'
+            if not self.dmMessage:
+                if not files:
+                    await sendMessage(self.message, lmsg + msg)
+                    if self.logMessage:
+                        await sendMessage(self.logMessage, lmsg + msg)
+                else:
+                    fmsg = '\n'
+                    for index, (link, name) in enumerate(files.items(), start=1):
+                        fmsg += f"{index}. <a href='{link}'>{name}</a>\n"
+                        if len(fmsg.encode() + msg.encode()) > 4000:
+                            if self.logMessage:
+                                await sendMessage(self.logMessage, lmsg + msg + fmsg)
+                            await sendMessage(self.message, lmsg + msg + fmsg)
+                            await sleep(1)
+                            fmsg = '\n'
+                    if fmsg != '\n':
+                        if self.logMessage:
+                            await sendMessage(self.logMessage, lmsg + msg + fmsg)
+                        await sendMessage(self.message, lmsg + msg + fmsg)
             else:
-                dispTime = datetime.now(timezone(config_dict['TIMEZONE'])).strftime('%d/%m/%y, %I:%M:%S %p')
-                attachmsg, saved = True, False
-                fmsg, totalmsg = '\n\n', ''
-                for index, (link, name) in enumerate(files.items(), start=1):
-                    fmsg += f"{index}. <a href='{link}'>{name}</a>\n"
-                    totalmsg = (msg + BotTheme('LINKS_SOURCE', On=dispTime, Source=self.source_msg) + BotTheme('L_LL_MSG') + fmsg) if attachmsg else fmsg
-                    if len(totalmsg.encode()) > 4000:
-                        if config_dict['SAVE_MSG'] and not saved:
-                            saved = True
-                            buttons.ibutton(BotTheme('SAVE_MSG'), 'save', 'footer')
-                        if self.linkslogmsg:
-                            await editMessage(self.linkslogmsg, totalmsg, buttons.build_menu(1))
-                            self.linkslogmsg = await sendMessage(self.linkslogmsg, "<i>Fetching Details...</i>")
-                        elif not (config_dict['BOT_PM'] or user_dict.get('bot_pm')):
-                            await sendMessage(self.message, msg + BotTheme('L_LL_MSG') + fmsg, buttons.build_menu(1))
-                        attachmsg = False
-                        await sleep(1.5)
-                        fmsg = ''
-                if fmsg != '\n\n':
-                    if config_dict['SAVE_MSG'] and not saved:
-                        saved = True
-                        buttons.ibutton(BotTheme('SAVE_MSG'), 'save', 'footer')
-                    if self.linkslogmsg:
-                        await editMessage(self.linkslogmsg, totalmsg, buttons.build_menu(1))
-                    elif not (config_dict['BOT_PM'] or user_dict.get('bot_pm')):
-                        await sendMessage(self.message, msg + BotTheme('L_LL_MSG') + fmsg, buttons.build_menu(1))
-                btn = ButtonMaker()
-                if config_dict['BOT_PM'] or user_dict.get('bot_pm'):
-                    await sendMessage(self.botpmmsg, msg + BotTheme('PM_BOT_MSG'), photo=self.random_pic)
-                    if self.isSuperGroup:
-                        btn.ibutton(BotTheme('CHECK_PM'), f"wzmlx {user_id} botpm", 'header')
-                        if self.linkslogmsg:
-                            btn.ubutton(BotTheme('CHECK_LL'), self.linkslogmsg.link)
-                        if self.source_url and config_dict['SOURCE_LINK']:
-                            btn.ubutton(BotTheme('SOURCE_URL'), self.source_url)
-                        btn = extra_btns(btn)
-                        await sendMessage(self.message, msg + BotTheme('L_BOT_MSG'), btn.build_menu(2), self.random_pic)
-                    else:
-                        await deleteMessage(self.botpmmsg)
-                elif self.linkslogmsg:
-                    btn.ubutton(BotTheme('CHECK_LL'), self.linkslogmsg.link)
-                    if self.source_url and config_dict['SOURCE_LINK']:
-                        btn.ubutton(BotTheme('SOURCE_URL'), self.source_url)
-                    btn = extra_btns(btn)
-                    await sendMessage(self.message, msg + BotTheme('L_LL_MSG'), btn.build_menu(2), self.random_pic)
-                    
+                if not files:
+                    await sendMessage(self.message, gmsg + msg + msg_)
+                    if self.logMessage:
+                        await sendMessage(self.logMessage, lmsg + msg)
+                elif self.dmMessage and not config_dict['DUMP_CHAT_ID']:
+                    await sendMessage(self.dmMessage, lmsg + msg)
+                    await sendMessage(self.message, gmsg + msg + msg_)
+                    if self.logMessage:
+                        await sendMessage(self.logMessage, lmsg + msg)
+                else:
+                    fmsg = '\n'
+                    for index, (link, name) in enumerate(files.items(), start=1):
+                        fmsg += f"{index}. <a href='{link}'>{name}</a>\n"
+                        if len(fmsg.encode() + msg.encode()) > 4000:
+                            if self.logMessage:
+                                await sendMessage(self.logMessage, lmsg + msg + fmsg)
+                            await sendMessage(self.dmMessage, gmsg + msg + fmsg)
+                            await sleep(1)
+                            fmsg = '\n'
+                    if fmsg != '\n':
+                        if self.logMessage:
+                            await sendMessage(self.logMessage, lmsg + msg + fmsg)
+                        await sendMessage(self.message, gmsg + msg + msg_)
+                        await sendMessage(self.dmMessage, gmsg + msg + fmsg)
+                  
             if self.seed:
                 if self.newDir:
                     await clean_target(self.newDir)
